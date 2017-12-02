@@ -41,7 +41,7 @@ import beem.bridge
 import beem.msgs
 
 
-def my_custom_msg_generator(sequence_length):
+def my_custom_msg_generator(sequence_length, payload):
     """
     An example of a custom msg generator.
 
@@ -51,6 +51,13 @@ def my_custom_msg_generator(sequence_length):
     seq = 0
     while seq < sequence_length:
         yield (seq, "magic_topic", "very boring payload")
+        seq += 1
+
+
+def payload_generator(sequence_length, topic, payload):
+    seq = 0
+    while seq < sequence_length:
+        yield (seq, topic, payload)
         seq += 1
 
 
@@ -69,11 +76,13 @@ def _worker(options, proc_num, auth=None):
             cid = auth.split(":")[0]
     else:
         # FIXME - add auth support here too dummy!
-        ts = beem.load.TrackingSender(options.host, options.port, cid)
+        ts = beem.load.TrackingSender(options.host, options.port, cid, auth)
 
     # Provide a custom generator
-    #msg_gen = my_custom_msg_generator(options.msg_count)
-    msg_gen = beem.msgs.createGenerator(cid, options)
+    if options.topic is not None and options.payload is not None:
+        msg_gen = payload_generator(options.msg_count, options.topic, options.payload)
+    else:
+        msg_gen = beem.msgs.createGenerator(cid, options)
     # This helps introduce jitter so you don't have many threads all in sync
     time.sleep(random.uniform(1, 10))
     ts.run(msg_gen, qos=options.qos)
@@ -147,6 +156,19 @@ def add_args(subparsers):
 mosquitto's psk_file configuration option.  Each process will use a single
 line from the file.  Only as many processes will be made as there are keys""")
 
+    parser.add_argument(
+        "--topic",
+        help="""Message topic"""
+    )
+    parser.add_argument(
+        "--payload",
+        help="""Message payload to send. If this option is set --msg-set and --timing will be ignored"""
+    )
+    parser.add_argument(
+        "--auth",
+        help="""Username and passwordfor broker authentication. Format: 'username:password'"""
+    )
+
     parser.set_defaults(handler=run)
 
 
@@ -177,9 +199,9 @@ def run(options):
     else:
         pool = multiprocessing.Pool(processes=options.processes)
         if options.thread_ratio == 1:
-            result_set = [pool.apply_async(_worker, (options, x)) for x in range(options.processes)]
+            result_set = [pool.apply_async(_worker, (options, x, options.auth)) for x in range(options.processes)]
         else:
-            result_set = [pool.apply_async(_worker_threaded, (options, x)) for x in range(options.processes)]
+            result_set = [pool.apply_async(_worker_threaded, (options, x, options.auth)) for x in range(options.processes)]
 
     completed_set = []
     while len(completed_set) < options.processes:

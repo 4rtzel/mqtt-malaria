@@ -29,14 +29,14 @@ import random
 import time
 
 
-def GaussianSize(cid, sequence_size, target_size):
+def GaussianSize(cid, topic, sequence_size, target_size):
     """
     Message generator creating gaussian distributed message sizes
     centered around target_size with a deviance of target_size / 20
     """
     num = 1
     while num <= sequence_size:
-        topic = "mqtt-malaria/%s/data/%d/%d" % (cid, num, sequence_size)
+        topic = topic if topic is not None else "mqtt-malaria/%s/data/%d/%d" % (cid, num, sequence_size)
         real_size = int(random.gauss(target_size, target_size / 20))
         payload = ''.join(random.choice(string.hexdigits) for _ in range(real_size))
         yield (num, topic, payload)
@@ -85,7 +85,7 @@ def createGenerator(label, options, index=None):
     cid = label
     if index:
         cid += "_" + str(index)
-    msg_gen = GaussianSize(cid, options.msg_count, options.msg_size)
+    msg_gen = GaussianSize(cid, options.topic, options.msg_count, options.msg_size)
     if options.timing:
         msg_gen = TimeTracking(msg_gen)
     if options.msgs_per_second > 0:

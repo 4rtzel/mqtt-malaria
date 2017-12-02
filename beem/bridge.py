@@ -74,7 +74,7 @@ class BridgingSender():
             launched = False
             while not launched:
                 try:
-                    self.ts = beem.load.TrackingSender("localhost", mb.port, "ts_" + mb.label)
+                    self.ts = beem.load.TrackingSender("localhost", mb.port, "ts_" + mb.label, self.auth)
                     launched = True
                 except:
                     # TrackingSender fails if it can't connect
@@ -247,7 +247,7 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, stream=sys.stderr)
     b = BridgingSender("localhost", 1883, "hohoho")
     # b = BridgingSender("localhost", 8883, "hohoho", "karlos:01230123")
-    generator = beem.msgs.GaussianSize("karlos", 10, 100)
+    generator = beem.msgs.GaussianSize("karlos", None, 10, 100)
     b.run(generator, 1)
 
     # b = ThreadedBridgingSender("localhost", 1883, "hohoho", ratio=20)
